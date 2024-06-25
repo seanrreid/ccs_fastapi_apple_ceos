@@ -1,3 +1,4 @@
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -6,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from db_connect import session
 
 # These are our models
-from models import CEO
+from models import CEO, CEOCreate
 
 app = FastAPI()
 
@@ -15,6 +16,7 @@ app = FastAPI()
 origins = [
     "http://localhost",
     "http://localhost:3000",
+    "http://localhost:5173"
 ]
 
 # Add the CORS middleware...
@@ -29,19 +31,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 def home():
     return {"message": "Root Route"}
 
 # C
+
+
 @app.post("/create")
-async def create_ceo(name: str, slug: str, year: int):
-    ceo = CEO(name=name, slug=slug, year=year)
+async def create_ceo(ceo_data: CEOCreate):
+    ceo = CEO(name=ceo_data.name, slug=ceo_data.slug, year=ceo_data.year)
     session.add(ceo)
     session.commit()
     return {"CEO added": ceo.name}
 
 # R
+
+
 @app.get('/ceos')
 def get_ceos():
     ceos = session.query(CEO)
@@ -50,12 +57,12 @@ def get_ceos():
 
 @app.get('/ceos/{slug}')
 def get_ceos(slug: str):
-    # This will return any value that is "like" the slug
-    ceo = session.query(CEO).filter(CEO.slug.like(f'%{slug}%'))
-    # This will return all entries
-    return ceo.all()
+    ceo = session.query(CEO).filter(CEO.slug == slug)
+    return ceo.first()
 
 # U
+
+
 @app.put('/ceos/{id}/update')
 async def update_ceo(id: int, name: str = None, slug: str = None, year: int = None):
     ceo = session.query(CEO).filter(CEO.id == id).first()
@@ -73,6 +80,8 @@ async def update_ceo(id: int, name: str = None, slug: str = None, year: int = No
         return {"message": "User ID not found"}
 
 # D
+
+
 @app.delete('/ceos/{id}/delete')
 async def remove_ceo(id: int):
     ceo = session.query(CEO).filter(CEO.id == id).first()
@@ -83,3 +92,6 @@ async def remove_ceo(id: int):
     else:
         return {"message": "User ID not found"}
 
+
+if __name__ == '__main__':
+    uvicorn.run('main:app', host='localhost', port=8000, reload=True)
